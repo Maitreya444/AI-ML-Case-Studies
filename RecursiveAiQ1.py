@@ -31,48 +31,50 @@ def generate_data():
 # Generate input and labels
 input, label = generate_data()
 
-# Make minibatches (batch size = 32)
+learning_rate = 0.01
+
+# Make minibatches.
 inputs = torch.split(input, 32)
 labels = torch.split(label, 32)
 
-# Define parameters to optimize
+# Define the two variables to optimize
 b1 = torch.autograd.Variable(torch.tensor([0.01]), requires_grad=True)
 b2 = torch.autograd.Variable(torch.tensor([0.01]), requires_grad=True)
 
-learning_rate = 0.1  # Step size for gradient descent
-
-# Training loop
 for epoch in range(15):
-    total_loss = 0  # To track the total loss for this epoch
-    for x, y in zip(inputs, labels):
-        # Calculate p(x) = 1 / (1 + exp(-(b1 + b2 * x)))
-        logits = b1 + b2 * x
-        p_x = torch.sigmoid(logits)
-        
-        # Calculate the negative log-likelihood loss
-        loss = -(y * torch.log(p_x) + (1 - y) * torch.log(1 - p_x)).mean()
-        total_loss += loss.item()  # Add to total loss for this epoch
+  total_loss = 0
+  for x, y in zip(inputs,labels):
+    # Calculate p_x as per formula above
+    logits = b1 + b2 * x
+    p_x = torch.sigmoid(logits)
+    # Calculate the negative loss likelihood
+    loss = -(y * torch.log(p_x) + (1 - y) * torch.log(1 - p_x)).mean()
+    total_loss += loss
+    # Calculate the gradient of the loss w.r.t. the inputs
+    loss.backward()
+    # Update the parameters b according to SGD formula
+    with torch.no_grad():
+      b1 -= learning_rate * b1.grad
+      b2 -= learning_rate * b2.grad
 
-        # Calculate gradients of the loss w.r.t. b1 and b2
-        loss.backward()
+    b1.grad.zero_()
+    b2.grad.zero_()
+    # Print out the loss value
+  print(f"Epoch {epoch+1}: Loss = {total_loss:.4f}, b1 = {b1.item():.4f}, b2 = {b2.item():.4f}")
 
-        # Update parameters b1 and b2 using SGD
-        with torch.no_grad():
-            b1 -= learning_rate * b1.grad
-            b2 -= learning_rate * b2.grad
-
-        # Zero gradients after the update
-        b1.grad.zero_()
-        b2.grad.zero_()
-    
-    # Print out the loss value for this epoch
-    print(f"Epoch {epoch+1}: Loss = {total_loss:.4f}, b1 = {b1.item():.4f}, b2 = {b2.item():.4f}")
-
-# Reproduce the image to validate results
+# Reproduce the image above to validate your result.
 with torch.no_grad():
-    plt.scatter(input.numpy(), label.numpy(), color='red', label='Data')  # True data
-    x_plot = torch.linspace(0, 1, 100)  # Generate x values for the curve
-    y_plot = torch.sigmoid(b1 + b2 * x_plot)  # Predicted probabilities
-    plt.plot(x_plot.numpy(), y_plot.numpy(), label='Model', color='blue')  # Logistic regression curve
+
+    plt.scatter(input.numpy(), label.numpy(), color='red', label='Data')
+
+    # Plotting the learned logistic curve
+    x_plot = torch.linspace(0, 1, 100)  # Generating more points for a smoother curve
+    y_plot = torch.sigmoid(b1 + b2 * x_plot)  # Computing logistic function for each x
+    plt.plot(x_plot.numpy(), y_plot.numpy(), color='blue', label='Model')
+
+    # Adding labels and legend
     plt.legend()
+    plt.xlabel("Input (x)")
+    plt.ylabel("Probability (p(x))")
+    plt.title("Logistic Regression with SGD")
     plt.show()
